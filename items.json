@@ -1,0 +1,124 @@
+{
+  "items": {
+    "wood": {
+      "name": "Древесина",
+      "desc": "Свежие брёвна. Главный строительный материал любой общины.",
+      "stack": 30,
+      "sprite": { "kind": "log" }
+    },
+    "stone": {
+      "name": "Камень",
+      "desc": "Тяжёлый обломок серого гранита.",
+      "stack": 30,
+      "sprite": { "kind": "stoneI" }
+    },
+    "iron": {
+      "name": "Железная руда",
+      "desc": "Кусок руды с бурыми прожилками. Пахнет будущей сталью.",
+      "stack": 20,
+      "sprite": { "kind": "oreI" }
+    },
+    "fish": {
+      "name": "Рыба",
+      "desc": "Свежий окунь. Пахнет рекой и утренним туманом.",
+      "stack": 10,
+      "food": { "energy": 24 },
+      "sprite": { "kind": "fishI" }
+    },
+    "axe": {
+      "name": "Топор",
+      "desc": "Рубит деревья заметно быстрее и даёт больше щепы.",
+      "stack": 1,
+      "tool": "axe",
+      "sprite": { "kind": "axeI" }
+    },
+    "pickaxe": {
+      "name": "Кирка",
+      "desc": "Без неё к железной жиле лучше не подходить.",
+      "stack": 1,
+      "tool": "pickaxe",
+      "sprite": { "kind": "pickI" }
+    },
+    "rod": {
+      "name": "Удочка",
+      "desc": "Орешниковый прут, леска и крючок. Рыба сама просится.",
+      "stack": 1,
+      "tool": "rod",
+      "sprite": { "kind": "rodI" }
+    }
+  },
+
+  "resources": {
+    "tree": {
+      "name": "Дерево",
+      "verb": "рубку",
+      "time": 3.2,
+      "energy": 6,
+      "hp": 3,
+      "respawn": 90,
+      "usesTool": "axe",
+      "yields": [ { "item": "wood", "min": 2, "max": 3 } ]
+    },
+    "rock": {
+      "name": "Валун",
+      "verb": "колку камня",
+      "time": 3.0,
+      "energy": 6,
+      "hp": 3,
+      "respawn": 120,
+      "yields": [ { "item": "stone", "min": 2, "max": 3 } ]
+    },
+    "ironore": {
+      "name": "Железная жила",
+      "verb": "добычу руды",
+      "time": 4.5,
+      "energy": 9,
+      "hp": 2,
+      "respawn": 240,
+      "needTool": "pickaxe",
+      "yields": [ { "item": "iron", "min": 1, "max": 2 } ]
+    },
+    "fishspot": {
+      "name": "Рыбное место",
+      "verb": "рыбную ловлю",
+      "time": 5.0,
+      "energy": 4,
+      "hp": 1,
+      "respawn": 40,
+      "needTool": "rod",
+      "yields": [ { "item": "fish", "min": 1, "max": 1 } ]
+    }
+  },
+
+  "recipes": [
+    {
+      "id": "axe",
+      "result": "axe",
+      "count": 1,
+      "time": 3,
+      "ingredients": [
+        { "item": "wood", "count": 3 },
+        { "item": "stone", "count": 2 }
+      ]
+    },
+    {
+      "id": "pickaxe",
+      "result": "pickaxe",
+      "count": 1,
+      "time": 3,
+      "ingredients": [
+        { "item": "wood", "count": 2 },
+        { "item": "stone", "count": 3 }
+      ]
+    },
+    {
+      "id": "rod",
+      "result": "rod",
+      "count": 1,
+      "time": 2,
+      "ingredients": [
+        { "item": "wood", "count": 2 }
+      ]
+    }
+  ]
+}

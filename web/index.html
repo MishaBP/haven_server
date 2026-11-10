@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Тихая Заводь — песочница</title>
+<style>
+  :root{
+    --wood:#3a2c1c; --wood2:#2b2013; --edge:#5c4526; --ink:#e6d8b8;
+    --mut:#9b8b68; --gold:#d8b45c; --good:#9ccb70; --warn:#e0a95c; --sys:#93b9cf;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;overflow:hidden;background:#0d120b;font:13px/1.45 "Segoe UI",Tahoma,sans-serif;color:var(--ink)}
+  canvas#game{position:fixed;inset:0;display:block;cursor:crosshair}
+  h1,h2,h3,.disp{font-family:Georgia,"Palatino Linotype",serif;font-variant:small-caps;letter-spacing:.12em}
+
+  .panel{background:linear-gradient(var(--wood),var(--wood2));border:2px solid var(--edge);
+    border-radius:6px;box-shadow:inset 0 1px 0 rgba(255,230,180,.08),0 4px 14px rgba(0,0,0,.55)}
+
+  /* ---------- меню ---------- */
+  #menu{position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(ellipse at 50% 38%,rgba(56,72,42,.55),rgba(8,12,7,.94) 70%)}
+  #menu .box{text-align:center;max-width:560px;padding:40px 30px}
+  #menu h1{font-size:52px;letter-spacing:.32em;color:var(--ink);text-shadow:0 2px 0 #000,0 0 26px rgba(216,180,92,.25);margin-bottom:6px}
+  #menu .sub{color:var(--mut);margin-bottom:26px;font-size:14px}
+  #menu .orn{color:var(--gold);letter-spacing:.5em;margin-bottom:26px}
+  #menu input{width:260px;padding:10px 14px;font-size:15px;color:var(--ink);background:#191410;
+    border:2px solid var(--edge);border-radius:4px;outline:none;text-align:center}
+  #menu input:focus{border-color:var(--gold)}
+  #menu button{display:block;margin:18px auto 0;width:260px;padding:11px;font-size:16px;cursor:pointer;
+    font-family:Georgia,serif;font-variant:small-caps;letter-spacing:.15em;color:#f4e7c6;
+    background:linear-gradient(#5a4326,#3a2c1c);border:2px solid #7a5c33;border-radius:5px;
+    box-shadow:0 3px 0 #241a0e;transition:transform .08s, box-shadow .08s}
+  #menu button:hover{box-shadow:0 3px 0 #241a0e,0 0 18px rgba(216,180,92,.35)}
+  #menu button:active{transform:translateY(2px);box-shadow:0 1px 0 #241a0e}
+  #menuIcons{display:flex;gap:18px;justify-content:center;margin:26px 0 8px}
+  #menuIcons canvas{width:44px;height:44px;image-rendering:pixelated;filter:drop-shadow(0 3px 3px rgba(0,0,0,.6))}
+  #menu .hint{color:var(--mut);font-size:12px;margin-top:20px}
+  #menu .tech{margin-top:26px;color:#5f5540;font-size:11px;letter-spacing:.08em}
+
+  #fatal{position:fixed;inset:0;z-index:40;display:none;align-items:center;justify-content:center;
+    background:rgba(5,8,4,.85);flex-direction:column;gap:14px}
+  #fatal .disp{font-size:26px;color:var(--warn)}
+  #fatal button{padding:9px 22px;cursor:pointer;background:#3a2c1c;color:var(--ink);border:2px solid var(--edge);border-radius:4px}
+
+  /* ---------- HUD ---------- */
+  #hud{position:fixed;inset:0;z-index:10;pointer-events:none;display:none}
+  #hud>*{pointer-events:auto}
+
+  #log{position:absolute;top:14px;left:14px;width:330px;max-height:38vh;overflow:hidden;
+    display:flex;flex-direction:column;pointer-events:none;
+    -webkit-mask-image:linear-gradient(#000 78%,transparent);mask-image:linear-gradient(#000 78%,transparent)}
+  #log div{padding:2px 8px;font-size:12.5px;text-shadow:0 1px 2px #000,0 0 6px #000;animation:fin .3s ease}
+  @keyframes fin{from{opacity:0;transform:translateX(-8px)}to{opacity:1}}
+  #log .info{color:var(--ink)} #log .good{color:var(--good)} #log .warn{color:var(--warn)} #log .sys{color:var(--sys)}
+
+  #topbar{position:absolute;top:14px;right:14px;padding:10px 14px;display:flex;flex-direction:column;gap:7px;min-width:230px}
+  #pname{font-family:Georgia,serif;font-variant:small-caps;letter-spacing:.1em;font-size:15px;color:var(--gold)}
+  #ebarWrap{height:12px;background:#171310;border:1px solid #000;border-radius:3px;overflow:hidden}
+  #ebar{height:100%;width:100%;background:linear-gradient(90deg,#6f9c4d,#b9c94e);transition:width .3s}
+  #ebar.low{background:linear-gradient(90deg,#a8552f,#d89040)}
+  #ebar.mid{background:linear-gradient(90deg,#b98a2f,#d8c04e)}
+  #elabel{font-size:11px;color:var(--mut);display:flex;justify-content:space-between}
+  #craftNow{font-size:12px;color:var(--sys);display:none}
+  #craftNow b{color:var(--ink)}
+
+  #craft{position:absolute;top:130px;right:14px;width:252px;padding:10px;max-height:calc(100vh - 260px);overflow:auto}
+  #craft h3{font-size:15px;color:var(--gold);margin-bottom:8px;border-bottom:1px solid #4a3820;padding-bottom:6px}
+  .recipe{display:flex;gap:9px;align-items:center;padding:7px;margin-bottom:6px;background:#241b10;
+    border:1px solid #43311a;border-left:3px solid #555;border-radius:4px;cursor:pointer;transition:background .12s}
+  .recipe:hover{background:#2e2314}
+  .recipe.ok{border-left-color:var(--good)}
+  .recipe.lack{opacity:.55}
+  .recipe canvas{width:34px;height:34px;flex:none}
+  .recipe .rn{font-size:13px}
+  .recipe .ri{font-size:11px;color:var(--mut)}
+  .recipe .ri .have{color:var(--good)} .recipe .ri .nope{color:#c96a4a}
+
+  #inv{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);display:flex;gap:8px;padding:10px}
+  .slot{position:relative;width:54px;height:54px;background:#1d1710;border:2px solid var(--edge);border-radius:5px;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .1s,border-color .1s}
+  .slot:hover{transform:translateY(-3px);border-color:var(--gold)}
+  .slot canvas{width:42px;height:42px}
+  .slot .cnt{position:absolute;right:3px;bottom:1px;font-size:11px;font-weight:700;color:#fff;text-shadow:0 1px 2px #000}
+  .slot .cnt.big{color:var(--gold)}
+  #invEmpty{color:var(--mut);font-size:12px;align-self:center;padding:0 8px}
+
+  #minimap{position:absolute;bottom:16px;right:14px;border:2px solid var(--edge);border-radius:4px;
+    box-shadow:0 4px 12px rgba(0,0,0,.5);width:124px;height:124px;image-rendering:pixelated}
+
+  #keys{position:absolute;bottom:16px;left:14px;color:#7d7157;font-size:11px;text-shadow:0 1px 2px #000;pointer-events:none}
+
+  #tip{position:fixed;z-index:50;display:none;max-width:250px;padding:9px 11px;font-size:12px;pointer-events:none}
+  #tip .tn{font-family:Georgia,serif;font-variant:small-caps;font-size:14px;color:var(--gold);margin-bottom:3px}
+  #tip .td{color:#cbbb97}
+  #tip .tm{margin-top:5px;color:var(--mut);font-size:11px}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="hud">
+  <div id="log"></div>
+  <div id="topbar" class="panel">
+    <div id="pname">—</div>
+    <div id="ebarWrap"><div id="ebar"></div></div>
+    <div id="elabel"><span>Силы</span><span id="enum">100</span></div>
+    <div id="craftNow">⚒ <b id="cnName"></b> <span id="cnPct"></span></div>
+  </div>
+  <div id="craft" class="panel"><h3>Ремёсла</h3><div id="recipes"></div></div>
+  <div id="inv" class="panel"></div>
+  <canvas id="minimap" width="112" height="112"></canvas>
+  <div id="keys">ЛКМ — идти / добывать &nbsp;·&nbsp; ПКМ — остановиться &nbsp;·&nbsp; клик по еде — съесть</div>
+</div>
+
+<div id="tip" class="panel"></div>
+
+<div id="menu">
+  <div class="box">
+    <h1>Тихая Заводь</h1>
+    <div class="orn">— ❖ —</div>
+    <div class="sub">медленная песочница о дереве, камне, железе и рыбе</div>
+    <input id="name" maxlength="24" placeholder="Имя персонажа" autocomplete="off">
+    <button id="join">Войти в мир</button>
+    <div id="menuIcons"></div>
+    <div class="hint">Рубите деревья и колите камень голыми руками, мастерите топор и кирку,<br>
+      вылавливайте рыбу удочкой. Всё считается на сервере — клиент лишь рисует мир.</div>
+    <div class="tech">авторитарный сервер: C++ · предметы: items.json</div>
+  </div>
+</div>
+
+<div id="fatal"><div class="disp" id="fatalMsg">Связь с сервером потеряна</div>
+  <button onclick="location.reload()">Вернуться</button></div>
+
+<script>
+'use strict';
+/* =====================================================================
+   Клиент «Тихой Заводи». Никакой игровой логики: только отрисовка
+   изометрии и отправка намерений серверу. Все правила — в server.cpp.
+   ===================================================================== */
+
+// ------------------------- данные из items.json -------------------------
+let ITEMS = {}, RES = {}, RECIPES = [], ITEM_ORDER = [];
+
+// ------------------------- изометрия -------------------------------------
+const TW = 64, TH = 32;
+const isoX = (x, y) => (x - y) * TW / 2;
+const isoY = (x, y) => (x + y) * TH / 2;
+function unIso(sx, sy) { const a = sx / (TW / 2), b = sy / (TH / 2); return { x: (a + b) / 2, y: (b - a) / 2 }; }
+
+// ------------------------- утилиты рисования -----------------------------
+function cnv(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
+function rng(seed) { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
+function hashStr(s) { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return h; }
+
+// ------------------------- спрайты тайлов --------------------------------
+function makeTile(kind, seed) {
+  const c = cnv(TW, TH), x = c.getContext('2d'), r = rng(seed);
+  const path = () => { x.beginPath(); x.moveTo(TW/2, 0); x.lineTo(TW, TH/2); x.lineTo(TW/2, TH); x.lineTo(0, TH/2); x.closePath(); };
+  path();
+  x.fillStyle = kind === 'g' ? '#4c7a39' : kind === 's' ? '#c9b078' : '#33688c';
+  x.fill();
+  x.save(); path(); x.clip();
+  for (let i = 0; i < 26; i++) {
+    const px = r() * TW, py = r() * TH;
+    x.fillStyle = kind === 'g' ? (r() < .5 ? '#446f33' : '#578a41')
+               : kind === 's' ? (r() < .5 ? '#bda266' : '#d4bd85')
+               : (r() < .5 ? '#2f6083' : '#3b739a');
+    x.fillRect(px, py, 2 + r() * 2, 1 + r() * 2);
+  }
+  x.restore();
+  return c;
+}
+const TILE_G = [makeTile('g', 11), makeTile('g', 29), makeTile('g', 47)];
+const TILE_S = [makeTile('s', 3), makeTile('s', 8)];
+const TILE_W = [makeTile('w', 5), makeTile('w', 9)];
+
+// ------------------------- спрайты объектов ------------------------------
+function sprTree(v) {
+  const c = cnv(110, 150), x = c.getContext('2d');
+  x.translate(55, 140);
+  x.fillStyle = '#5d4023'; x.fillRect(-6, -52, 12, 52);
+  x.fillStyle = '#4a3018'; x.fillRect(1, -52, 5, 52);
+  if (v === 0) {
+    for (let i = 0; i < 4; i++) {
+      const yT = -126 + i * 20, half = 24 + i * 12, h = 48;
+      x.fillStyle = ['#26502c', '#2c5c31', '#356c38', '#3f7c41'][i];
+      x.beginPath(); x.moveTo(0, yT); x.lineTo(half, yT + h); x.lineTo(-half, yT + h); x.closePath();
+      x.fill(); x.strokeStyle = 'rgba(15,30,15,.35)'; x.stroke();
+    }
+  } else {
+    const blobs = [[0, -96, 34], [-25, -72, 26], [25, -74, 27], [0, -60, 30]];
+    blobs.forEach(([bx, by, br], i) => {
+      x.fillStyle = i % 2 ? '#2f5f2f' : '#3a7038';
+      x.beginPath(); x.arc(bx, by, br, 0, 7); x.fill();
+    });
+    x.fillStyle = 'rgba(120,180,110,.35)';
+    x.beginPath(); x.arc(-8, -100, 18, 0, 7); x.fill();
+  }
+  return c;
+}
+function sprRockBase(x, ore) {
+  x.fillStyle = '#8d9297';
+  x.beginPath(); x.moveTo(-34, 0); x.lineTo(-26, -26); x.lineTo(-4, -38); x.lineTo(22, -30); x.lineTo(34, -8); x.lineTo(28, 0); x.closePath(); x.fill();
+  x.fillStyle = '#a8adb2';
+  x.beginPath(); x.moveTo(-26, -26); x.lineTo(-4, -38); x.lineTo(6, -20); x.lineTo(-14, -8); x.closePath(); x.fill();
+  x.fillStyle = '#6f7479';
+  x.beginPath(); x.moveTo(22, -30); x.lineTo(34, -8); x.lineTo(28, 0); x.lineTo(12, 0); x.closePath(); x.fill();
+  x.strokeStyle = 'rgba(30,30,35,.5)'; x.lineWidth = 1;
+  x.beginPath(); x.moveTo(-8, -30); x.lineTo(-2, -14); x.lineTo(-12, -2); x.stroke();
+  if (ore) {
+    const r = rng(77);
+    for (let i = 0; i < 8; i++) {
+      const px = -22 + r() * 46, py = -26 + r() * 22;
+      x.fillStyle = r() < .6 ? '#c9772e' : '#e8a04d';
+      x.beginPath(); x.arc(px, py, 1.8 + r() * 1.6, 0, 7); x.fill();
+    }
+  }
+}
+function sprRock() { const c = cnv(90, 70), x = c.getContext('2d'); x.translate(45, 58); sprRockBase(x, false); return c; }
+function sprOre()  { const c = cnv(90, 70), x = c.getContext('2d'); x.translate(45, 58); sprRockBase(x, true);  return c; }
+function sprBush(kind) { // запасной спрайт для неизвестных ресурсов из JSON
+  const c = cnv(80, 64), x = c.getContext('2d'); x.translate(40, 56);
+  const h = hashStr(kind) % 360, r = rng(hashStr(kind));
+  for (let i = 0; i < 5; i++) {
+    x.fillStyle = `hsl(${(h + 90) % 360},40%,${26 + i * 4}%)`;
+    x.beginPath(); x.arc(-18 + r() * 36, -14 - r() * 18, 10 + r() * 10, 0, 7); x.fill();
+  }
+  x.fillStyle = `hsl(${h},60%,55%)`;
+  for (let i = 0; i < 6; i++) { x.beginPath(); x.arc(-20 + r() * 40, -10 - r() * 24, 2.2, 0, 7); x.fill(); }
+  return c;
+}
+function sprPlayer(hue) {
+  const c = cnv(48, 72), x = c.getContext('2d');
+  x.translate(24, 66);
+  x.fillStyle = `hsl(${hue},38%,38%)`;
+  x.beginPath(); x.moveTo(0, -46); x.bezierCurveTo(-14, -40, -15, -12, -13, 0);
+  x.lineTo(13, 0); x.bezierCurveTo(15, -12, 14, -40, 0, -46); x.closePath(); x.fill();
+  x.fillStyle = `hsl(${hue},38%,29%)`;
+  x.beginPath(); x.moveTo(0, -46); x.bezierCurveTo(14, -40, 15, -12, 13, 0); x.lineTo(2, 0); x.lineTo(2, -45); x.closePath(); x.fill();
+  x.fillStyle = '#3a2a18'; x.fillRect(-11, -22, 22, 4);
+  x.fillStyle = '#e9c69b'; x.beginPath(); x.arc(0, -52, 8, 0, 7); x.fill();
+  x.fillStyle = '#4a3320'; x.beginPath(); x.arc(0, -55, 8, Math.PI * .95, Math.PI * 2.05); x.fill();
+  return c;
+}
+const OBJ_SPR = {};
+function objSprite(kind) {
+  if (kind in OBJ_SPR) return OBJ_SPR[kind];
+  let s = null;
+  if (kind === 'tree') s = { c: sprTree(hashStr(kind) % 2), ox: 55, oy: 140, sway: true };
+  else if (kind === 'rock') s = { c: sprRock(), ox: 45, oy: 58 };
+  else if (kind === 'ironore') s = { c: sprOre(), ox: 45, oy: 58 };
+  else if (kind !== 'fishspot') s = { c: sprBush(kind), ox: 40, oy: 56 };
+  OBJ_SPR[kind] = s;
+  return s;
+}
+
+// ------------------------- иконки предметов ------------------------------
+const ICONS = {};
+const ICON_FN = {
+  log(x) { x.save(); x.translate(22, 24); x.rotate(-.5);
+    x.fillStyle = '#7a5230'; x.fillRect(-16, -7, 32, 14);
+    x.fillStyle = '#5d3d20'; x.fillRect(-16, 1, 32, 6);
+    x.fillStyle = '#c9a06a'; x.beginPath(); x.ellipse(16, 0, 5, 7, 0, 0, 7); x.fill();
+    x.strokeStyle = '#8a6a3f'; x.beginPath(); x.ellipse(16, 0, 2.5, 3.6, 0, 0, 7); x.stroke(); x.restore(); },
+  stoneI(x) { x.translate(22, 24); x.fillStyle = '#8d9297';
+    x.beginPath(); x.moveTo(-14, 8); x.lineTo(-11, -6); x.lineTo(0, -12); x.lineTo(12, -5); x.lineTo(14, 6); x.closePath(); x.fill();
+    x.fillStyle = '#a8adb2'; x.beginPath(); x.moveTo(-11, -6); x.lineTo(0, -12); x.lineTo(4, -3); x.lineTo(-6, 1); x.closePath(); x.fill(); },
+  oreI(x) { ICON_FN.stoneI(x); const r = rng(5);
+    for (let i = 0; i < 5; i++) { x.fillStyle = r() < .5 ? '#c9772e' : '#e8a04d';
+      x.beginPath(); x.arc(-8 + r() * 16, -8 + r() * 12, 2, 0, 7); x.fill(); } },
+  fishI(x) { x.translate(22, 22); x.rotate(-.35);
+    x.fillStyle = '#7c9aa6'; x.beginPath(); x.ellipse(-2, 0, 13, 6.5, 0, 0, 7); x.fill();
+    x.fillStyle = '#5d7884'; x.beginPath(); x.moveTo(10, 0); x.lineTo(18, -6); x.lineTo(18, 6); x.closePath(); x.fill();
+    x.fillStyle = '#9db8c2'; x.beginPath(); x.ellipse(-4, -2, 8, 2.6, -.2, 0, 7); x.fill();
+    x.fillStyle = '#1c2a30'; x.beginPath(); x.arc(-10, -1.5, 1.5, 0, 7); x.fill(); },
+  axeI(x) { x.translate(22, 22); x.rotate(.7);
+    x.fillStyle = '#7a5230'; x.fillRect(-2.5, -14, 5, 30);
+    x.fillStyle = '#b9c2c8'; x.beginPath(); x.moveTo(-2, -14); x.lineTo(-13, -8); x.lineTo(-11, 2); x.lineTo(-2, -2); x.closePath(); x.fill();
+    x.strokeStyle = '#7d868c'; x.stroke(); },
+  pickI(x) { x.translate(22, 22); x.rotate(.7);
+    x.fillStyle = '#7a5230'; x.fillRect(-2.5, -12, 5, 28);
+    x.strokeStyle = '#9aa2a8'; x.lineWidth = 5; x.lineCap = 'round';
+    x.beginPath(); x.arc(0, -4, 12, Math.PI * 1.15, Math.PI * 1.85); x.stroke(); },
+  rodI(x) { x.translate(22, 22);
+    x.strokeStyle = '#8a6a3a'; x.lineWidth = 3; x.lineCap = 'round';
+    x.beginPath(); x.moveTo(-13, 14); x.lineTo(12, -13); x.stroke();
+    x.strokeStyle = 'rgba(220,230,240,.8)'; x.lineWidth = 1;
+    x.beginPath(); x.moveTo(12, -13); x.quadraticCurveTo(15, 0, 11, 9); x.stroke();
+    x.fillStyle = '#c9403a'; x.beginPath(); x.arc(11, 9, 2.6, 0, 7); x.fill(); },
+};
+function itemIcon(id) {
+  if (ICONS[id]) return ICONS[id];
+  const def = ITEMS[id] || {}, sk = (def.sprite && def.sprite.kind) || '';
+  const c = cnv(44, 44), x = c.getContext('2d');
+  if (ICON_FN[sk]) ICON_FN[sk](x);
+  else { // универсальная иконка для предметов, добавленных в items.json
+    const h = hashStr(id) % 360;
+    x.translate(22, 22);
+    x.fillStyle = `hsl(${h},45%,42%)`;
+    x.beginPath(); x.moveTo(0, -16); x.lineTo(16, 0); x.lineTo(0, 16); x.lineTo(-16, 0); x.closePath(); x.fill();
+    x.strokeStyle = 'rgba(0,0,0,.45)'; x.stroke();
+    x.fillStyle = '#f2e8cf'; x.font = 'bold 15px Georgia'; x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.fillText(((def.name || '?')[0] || '?').toUpperCase(), 0, 1);
+  }
+  ICONS[id] = c;
+  return c;
+}
+
+// ------------------------- состояние -------------------------------------
+let WS_ = null, myId = -1, NAME = '';
+let MW = 0, MH = 0, TILES = '';
+const players = new Map();   // id -> {x,y,tx,ty,name,act,craft,dir}
+const objs = new Map();      // id -> {k,x,y,hp,hitT}
+let inv = {}, energy = 100, craftState = null;
+let cam = { x: 28, y: 28 };
+let hoverTile = null, hoverObj = -1, destFlag = null, mouse = { x: 0, y: 0 };
+let time = 0, lastTs = 0;
+const cv = document.getElementById('game'), ctx = cv.getContext('2d');
+
+function resize() { cv.width = innerWidth; cv.height = innerHeight; }
+addEventListener('resize', resize); resize();
+
+// ------------------------- сеть -------------------------------------------
+function send(o) { if (WS_ && WS_.readyState === 1) WS_.send(JSON.stringify(o)); }
+function connect() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  WS_ = new WebSocket(`${proto}://${location.host}`);
+  WS_.onopen = () => send({ t: 'join', name: NAME });
+  WS_.onmessage = e => onMsg(JSON.parse(e.data));
+  WS_.onclose = () => { if (myId >= 0) showFatal('Связь с сервером потеряна'); else showFatal('Сервер не отвечает'); };
+  WS_.onerror = () => {};
+}
+function showFatal(t) { document.getElementById('fatalMsg').textContent = t; document.getElementById('fatal').style.display = 'flex'; }
+
+function onMsg(m) {
+  if (m.t === 'init') {
+    MW = m.w; MH = m.h; TILES = m.tiles; myId = m.you;
+    objs.clear(); m.objs.forEach(o => objs.set(o.id, { ...o, hitT: -9 }));
+    players.clear();
+    (m.pl || []).forEach(sp => players.set(sp.id, { id: sp.id, name: sp.n, x: sp.x, y: sp.y, tx: sp.x, ty: sp.y, act: sp.act, craft: sp.craft, dir: 1 }));
+    inv = m.inv || {}; energy = m.e ?? 100;
+    const me = players.get(myId);
+    if (me) { cam.x = me.x; cam.y = me.y; }
+    buildMinimap(); refreshInv(); refreshCraft(); refreshTop();
+    (m.ev || []).forEach(e => log(e.k, e.m));
+    document.getElementById('menu').style.display = 'none';
+    document.getElementById('hud').style.display = 'block';
+  } else if (m.t === 'st') {
+    const seen = new Set();
+    (m.pl || []).forEach(sp => {
+      seen.add(sp.id);
+      let p = players.get(sp.id);
+      if (!p) { p = { id: sp.id, x: sp.x, y: sp.y, dir: 1 }; players.set(sp.id, p); log('sys', sp.n + ' вошёл в мир.'); }
+      p.tx = sp.x; p.ty = sp.y; p.name = sp.n; p.act = sp.act || null; p.craft = sp.craft || null;
+    });
+    for (const id of [...players.keys()]) if (!seen.has(id)) players.delete(id);
+    (m.ob || []).forEach(o => {
+      const ob = objs.get(o.id);
+      if (!ob) return;
+      if (o.del) { objs.delete(o.id); if (hoverObj === o.id) hoverObj = -1; }
+      else { if (o.hp < ob.hp) ob.hitT = time; ob.hp = o.hp; }
+    });
+    if (m.you) {
+      energy = m.you.e;
+      if (JSON.stringify(m.you.inv) !== JSON.stringify(inv)) { inv = m.you.inv; refreshInv(); refreshCraft(); }
+      craftState = m.you.craft || null;
+      refreshTop();
+    }
+    (m.ev || []).forEach(e => log(e.k, e.m));
+  }
+}
+
+// ------------------------- журнал -----------------------------------------
+function log(kind, msg) {
+  const box = document.getElementById('log');
+  const d = document.createElement('div');
+  d.className = kind; d.textContent = msg;
+  box.appendChild(d);
+  while (box.children.length > 34) box.removeChild(box.firstChild);
+}
+
+// ------------------------- HUD ---------------------------------------------
+function refreshTop() {
+  const me = players.get(myId);
+  if (me && me.name) document.getElementById('pname').textContent = me.name;
+  const bar = document.getElementById('ebar');
+  bar.style.width = Math.round(energy) + '%';
+  bar.className = energy < 25 ? 'low' : energy < 50 ? 'mid' : '';
+  document.getElementById('enum').textContent = Math.round(energy);
+  const cn = document.getElementById('craftNow');
+  if (craftState) {
+    cn.style.display = 'block';
+    const r = RECIPES.find(r => r.id === craftState.id);
+    document.getElementById('cnName').textContent = r ? itemName(r.result) : craftState.id;
+    document.getElementById('cnPct').textContent = Math.round(craftState.p * 100) + '%';
+  } else cn.style.display = 'none';
+}
+function itemName(id) { return (ITEMS[id] && ITEMS[id].name) || id; }
+
+function refreshInv() {
+  const box = document.getElementById('inv');
+  box.innerHTML = '';
+  let any = false;
+  ITEM_ORDER.forEach(id => {
+    const n = inv[id] || 0;
+    if (n <= 0) return;
+    any = true;
+    const s = document.createElement('div');
+    s.className = 'slot';
+    const ic = itemIcon(id).cloneNode(); ic.getContext('2d').drawImage(itemIcon(id), 0, 0);
+    s.appendChild(ic);
+    const c = document.createElement('span');
+    c.className = 'cnt' + (n >= 20 ? ' big' : ''); c.textContent = n;
+    s.appendChild(c);
+    s.onmouseenter = e => showTip(itemTipHtml(id), e);
+    s.onmousemove = e => moveTip(e);
+    s.onmouseleave = hideTip;
+    s.onclick = () => send({ t: 'use', id });
+    box.appendChild(s);
+  });
+  if (!any) box.innerHTML = '<span id="invEmpty">Карманы пусты…</span>';
+}
+function itemTipHtml(id) {
+  const d = ITEMS[id] || {};
+  let h = `<div class="tn">${esc(d.name || id)}</div>`;
+  if (d.desc) h += `<div class="td">${esc(d.desc)}</div>`;
+  const m = [];
+  if (d.food) m.push(`✦ Еда: +${d.food.energy} сил — клик, чтобы съесть`);
+  if (d.tool) m.push('Инструмент');
+  if (d.stack) m.push(`Куча: до ${d.stack}`);
+  if (m.length) h += `<div class="tm">${m.join('<br>')}</div>`;
+  return h;
+}
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+function refreshCraft() {
+  const box = document.getElementById('recipes');
+  box.innerHTML = '';
+  RECIPES.forEach(r => {
+    let ok = true, ingHtml = [];
+    r.ingredients.forEach(ing => {
+      const have = inv[ing.item] || 0;
+      const good = have >= ing.count;
+      if (!good) ok = false;
+      ingHtml.push(`<span class="${good ? 'have' : 'nope'}">${ing.count}× ${esc(itemName(ing.item))}</span>`);
+    });
+    const row = document.createElement('div');
+    row.className = 'recipe ' + (ok ? 'ok' : 'lack');
+    const ic = itemIcon(r.result).cloneNode(); ic.getContext('2d').drawImage(itemIcon(r.result), 0, 0);
+    row.appendChild(ic);
+    const txt = document.createElement('div');
+    txt.innerHTML = `<div class="rn">${esc(itemName(r.result))} <span style="color:#7d7157;font-size:11px">· ${r.time}с</span></div>
+                     <div class="ri">${ingHtml.join(' · ')}</div>`;
+    row.appendChild(txt);
+    row.onclick = () => send({ t: 'craft', id: r.id });
+    row.onmouseenter = e => showTip(`<div class="tn">${esc(itemName(r.result))}</div><div class="td">${esc((ITEMS[r.result]||{}).desc||'')}</div>`, e);
+    row.onmousemove = e => moveTip(e);
+    row.onmouseleave = hideTip;
+    box.appendChild(row);
+  });
+}
+
+const tipEl = document.getElementById('tip');
+function showTip(html, e) { tipEl.innerHTML = html; tipEl.style.display = 'block'; moveTip(e); }
+function moveTip(e) {
+  let x = e.clientX + 16, y = e.clientY + 18;
+  if (x + 270 > innerWidth) x = e.clientX - 270;
+  if (y + 130 > innerHeight) y = e.clientY - 120;
+  tipEl.style.left = x + 'px'; tipEl.style.top = y + 'px';
+}
+function hideTip() { tipEl.style.display = 'none'; }
+
+// ------------------------- миникарта ---------------------------------------
+const mm = document.getElementById('minimap'), mmx = mm.getContext('2d');
+let mmBase = null;
+function buildMinimap() {
+  mmBase = cnv(MW * 2, MH * 2);
+  const b = mmBase.getContext('2d');
+  for (let y = 0; y < MH; y++)
+    for (let x = 0; x < MW; x++) {
+      const ch = TILES[y * MW + x];
+      b.fillStyle = ch === 'g' ? '#3c6330' : ch === 'w' ? '#2c5d7a' : '#b8a26a';
+      b.fillRect(x * 2, y * 2, 2, 2);
+    }
+}
+function drawMinimap() {
+  if (!mmBase) return;
+  mmx.drawImage(mmBase, 0, 0);
+  objs.forEach(o => {
+    mmx.fillStyle = o.k === 'tree' ? '#1d3b1f' : o.k === 'rock' ? '#9aa0a5' : o.k === 'ironore' ? '#c47a33' : '#7fd4ff';
+    mmx.fillRect(o.x * 2, o.y * 2, 2, 2);
+  });
+  players.forEach(p => { mmx.fillStyle = p.id === myId ? '#ffd76a' : '#ffffff'; mmx.fillRect(p.x * 2 - 1, p.y * 2 - 1, 3, 3); });
+}
+
+// ------------------------- ввод --------------------------------------------
+function screenToWorld(e) {
+  const me = players.get(myId) || cam;
+  const sx = e.clientX - cv.width / 2 + isoX(cam.x, cam.y);
+  const sy = e.clientY - cv.height / 2 + isoY(cam.x, cam.y);
+  return unIso(sx, sy);
+}
+cv.addEventListener('mousemove', e => {
+  mouse = e;
+  const w = screenToWorld(e);
+  hoverTile = { x: Math.floor(w.x), y: Math.floor(w.y) };
+  hoverObj = -1;
+  let best = 1.1;
+  objs.forEach(o => {
+    const d = Math.hypot(w.x - o.x, w.y - o.y);
+    if (d < best) { best = d; hoverObj = o.id; }
+  });
+  cv.style.cursor = hoverObj >= 0 ? 'pointer' : 'crosshair';
+  if (hoverObj >= 0) {
+    const o = objs.get(hoverObj);
+    const r = RES[o.k] || {};
+    let h = `<div class="tn">${esc(r.name || o.k)}</div>`;
+    h += `<div class="td">Прочность: ${o.hp}/${r.hp || '?'} — клик, чтобы начать ${esc(r.verb || 'работу')}</div>`;
+    const m = [];
+    if (r.needTool) m.push(`Требуется: ${esc(itemName(r.needTool))}`);
+    if (r.usesTool) m.push(`С инструментом «${esc(itemName(r.usesTool))}» быстрее и добычливее`);
+    if (r.energy) m.push(`Усилия: ${r.energy} за подход`);
+    if (m.length) h += `<div class="tm">${m.join('<br>')}</div>`;
+    showTip(h, e);
+  } else hideTip();
+});
+cv.addEventListener('mouseleave', () => { hoverObj = -1; hoverTile = null; hideTip(); });
+cv.addEventListener('contextmenu', e => e.preventDefault());
+cv.addEventListener('mousedown', e => {
+  e.preventDefault();
+  if (myId < 0) return;
+  if (e.button === 2) { send({ t: 'stop' }); destFlag = null; return; }
+  if (hoverObj >= 0 && objs.has(hoverObj)) { send({ t: 'act', id: hoverObj }); return; }
+  const w = screenToWorld(e);
+  const x = Math.floor(w.x), y = Math.floor(w.y);
+  if (x >= 0 && y >= 0 && x < MW && y < MH) {
+    send({ t: 'goto', x, y });
+    destFlag = { x, y, t: time };
+  }
+});
+
+// ------------------------- отрисовка ---------------------------------------
+function diamond(sx, sy) {
+  ctx.beginPath();
+  ctx.moveTo(sx, sy - TH / 2); ctx.lineTo(sx + TW / 2, sy); ctx.lineTo(sx, sy + TH / 2); ctx.lineTo(sx - TW / 2, sy);
+  ctx.closePath();
+}
+function shadow(ax, ay, rx) {
+  ctx.fillStyle = 'rgba(10,14,8,.3)';
+  ctx.beginPath(); ctx.ellipse(ax, ay + 4, rx, rx * .42, 0, 0, 7); ctx.fill();
+}
+function drawFishSpot(ax, ay, id) {
+  for (let k = 0; k < 3; k++) {
+    const ph = ((time * .45) + id * .37 + k / 3) % 1;
+    ctx.globalAlpha = .4 * (1 - ph);
+    ctx.strokeStyle = '#bfe6ff'; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.ellipse(ax, ay, 8 + ph * 22, (8 + ph * 22) / 2, 0, 0, 7); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  const j = (time * .35 + id * .9) % 6;
+  if (j < .55) {
+    const p = j / .55;
+    ctx.save(); ctx.translate(ax + Math.sin(id) * 6, ay - Math.sin(p * Math.PI) * 16); ctx.rotate(-.6 + p * 1.2);
+    ctx.fillStyle = '#9fc4d8';
+    ctx.beginPath(); ctx.ellipse(0, 0, 7, 3, 0, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(6, 0); ctx.lineTo(11, -3); ctx.lineTo(11, 3); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+}
+function drawObj(o, cx, cy) {
+  const s = objSprite(o.k);
+  if (!s) return;
+  let ax = isoX(o.x, o.y) - cx, ay = isoY(o.x, o.y) - cy;
+  if (time - o.hitT < .3) ax += Math.sin(time * 60) * 2;
+  shadow(ax, ay, 18);
+  ctx.save();
+  ctx.translate(ax, ay);
+  if (s.sway) ctx.rotate(Math.sin(time * .9 + o.id) * .012);
+  ctx.drawImage(s.c, -s.ox, -s.oy);
+  ctx.restore();
+  const maxhp = (RES[o.k] || {}).hp || 1;
+  if (o.hp < maxhp) {
+    ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(ax - 17, ay - s.oy - 8, 34, 5);
+    ctx.fillStyle = '#c96a4a'; ctx.fillRect(ax - 16, ay - s.oy - 7, 32 * (o.hp / maxhp), 3);
+  }
+}
+function drawPlayer(p, cx, cy) {
+  const ax = isoX(p.x, p.y) - cx, ay = isoY(p.x, p.y) - cy;
+  shadow(ax, ay, 12);
+  const spr = sprPlayer((p.id * 47) % 360);
+  const moving = Math.abs(p.tx - p.x) + Math.abs(p.ty - p.y) > .08;
+  if (moving && Math.abs(p.tx - p.x) > .02) p.dir = p.tx > p.x ? 1 : -1;
+  ctx.save();
+  ctx.translate(ax, ay + (moving ? Math.abs(Math.sin(time * 11)) * -2 : 0));
+  ctx.scale(p.dir, 1);
+  ctx.drawImage(spr, -24, -66);
+  ctx.restore();
+  ctx.font = '11px "Segoe UI",sans-serif'; ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillText(p.name || '', ax + 1, ay - 73);
+  ctx.fillStyle = p.id === myId ? '#ffd76a' : '#e8dcc0';
+  ctx.fillText(p.name || '', ax, ay - 74);
+  if (p.craft) { ctx.fillStyle = '#d8b45c'; ctx.fillText('⚒', ax + 20, ay - 60); }
+}
+
+function draw(dt) {
+  ctx.fillStyle = '#0d120b'; ctx.fillRect(0, 0, cv.width, cv.height);
+  ctx.save();
+  ctx.translate(cv.width / 2, cv.height / 2);
+  const cx = isoX(cam.x, cam.y), cy = isoY(cam.x, cam.y);
+
+  // тайлы
+  for (let y = 0; y < MH; y++)
+    for (let x = 0; x < MW; x++) {
+      const sx = isoX(x, y) - cx, sy = isoY(x, y) - cy;
+      if (sx < -cv.width / 2 - TW || sx > cv.width / 2 + TW || sy < -cv.height / 2 - TH || sy > cv.height / 2 + TH) continue;
+      const ch = TILES[y * MW + x];
+      let img;
+      if (ch === 'w') img = TILE_W[((x * 7 + y * 13 + (time * 1.6 | 0)) & 1)];
+      else if (ch === 's') img = TILE_S[(x * 3 + y * 5) & 1];
+      else img = TILE_G[(x * 3 + y * 5) % 3];
+      ctx.drawImage(img, sx - TW / 2, sy - TH / 2);
+    }
+
+  // наведение и флаг назначения
+  if (hoverTile && hoverTile.x >= 0 && hoverTile.y >= 0 && hoverTile.x < MW && hoverTile.y < MH) {
+    const sx = isoX(hoverTile.x + .5, hoverTile.y + .5) - cx, sy = isoY(hoverTile.x + .5, hoverTile.y + .5) - cy;
+    diamond(sx, sy);
+    ctx.strokeStyle = hoverObj >= 0 ? 'rgba(255,215,106,.95)' : 'rgba(230,220,190,.5)';
+    ctx.lineWidth = 1.6; ctx.stroke();
+  }
+  if (destFlag) {
+    const age = time - destFlag.t;
+    if (age > 6) destFlag = null;
+    else {
+      const sx = isoX(destFlag.x + .5, destFlag.y + .5) - cx, sy = isoY(destFlag.x + .5, destFlag.y + .5) - cy;
+      ctx.globalAlpha = Math.max(0, 1 - age / 6);
+      ctx.strokeStyle = '#e8dcc0'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx, sy - 22); ctx.stroke();
+      ctx.fillStyle = '#c9563a';
+      ctx.beginPath(); ctx.moveTo(sx, sy - 22);
+      ctx.lineTo(sx + 12 + Math.sin(time * 6) * 2, sy - 18); ctx.lineTo(sx, sy - 14); ctx.closePath(); ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  // объекты и игроки с сортировкой по глубине
+  const list = [];
+  objs.forEach(o => {
+    if (o.k === 'fishspot') list.push({ d: o.x + o.y, f: () => drawFishSpot(isoX(o.x, o.y) - cx, isoY(o.x, o.y) - cy, o.id) });
+    else list.push({ d: o.x + o.y, f: () => drawObj(o, cx, cy) });
+  });
+  players.forEach(p => list.push({ d: p.x + p.y + .01, f: () => drawPlayer(p, cx, cy) }));
+  list.sort((a, b) => a.d - b.d).forEach(e => e.f());
+
+  // полоски прогресса над объектами
+  players.forEach(p => {
+    if (!p.act) return;
+    const o = objs.get(p.act.o);
+    if (!o) return;
+    const s = objSprite(o.k);
+    const ax = isoX(o.x, o.y) - cx, ay = isoY(o.x, o.y) - cy - (s ? s.oy : 40) - 14;
+    ctx.fillStyle = 'rgba(0,0,0,.65)'; ctx.fillRect(ax - 18, ay, 36, 6);
+    ctx.fillStyle = '#9ccb70'; ctx.fillRect(ax - 17, ay + 1, 34 * Math.min(1, p.act.p), 4);
+  });
+
+  ctx.restore();
+
+  // лёгкий цикл дня и ночи + виньетка
+  const night = .04 + .16 * (0.5 + 0.5 * Math.sin(time / 90));
+  ctx.fillStyle = `rgba(12,18,48,${night})`; ctx.fillRect(0, 0, cv.width, cv.height);
+  const g = ctx.createRadialGradient(cv.width / 2, cv.height / 2, cv.height * .35, cv.width / 2, cv.height / 2, cv.height * .8);
+  g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,.42)');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, cv.width, cv.height);
+}
+
+function frame(ts) {
+  requestAnimationFrame(frame);
+  const dt = Math.min(.05, (ts - lastTs) / 1000 || 0);
+  lastTs = ts; time += dt;
+  if (!TILES) return;
+  players.forEach(p => {
+    if (p.tx === undefined) { p.tx = p.x; p.ty = p.y; }
+    const k = 1 - Math.exp(-dt * 9);
+    p.x += (p.tx - p.x) * k; p.y += (p.ty - p.y) * k;
+  });
+  const me = players.get(myId);
+  if (me) { const k = 1 - Math.exp(-dt * 5); cam.x += (me.x - cam.x) * k; cam.y += (me.y - cam.y) * k; }
+  draw(dt);
+  drawMinimap();
+}
+requestAnimationFrame(frame);
+
+// ------------------------- запуск ------------------------------------------
+async function boot() {
+  try {
+    const data = await (await fetch('items.json')).json();
+    ITEMS = data.items || {};
+    RES = data.resources || {};
+    RECIPES = data.recipes || [];
+    ITEM_ORDER = Object.keys(ITEMS);
+  } catch (e) { log('warn', 'Не удалось загрузить items.json'); }
+  // иконки на заставку — тоже из JSON
+  const mi = document.getElementById('menuIcons');
+  ['wood', 'stone', 'fish'].forEach(id => {
+    if (!ITEMS[id]) return;
+    const c = cnv(44, 44); c.getContext('2d').drawImage(itemIcon(id), 0, 0);
+    mi.appendChild(c);
+  });
+  const nameInput = document.getElementById('name');
+  nameInput.value = localStorage.getItem('tz_name') || '';
+  const join = () => {
+    NAME = nameInput.value.trim() || 'Странник';
+    localStorage.setItem('tz_name', NAME);
+    document.getElementById('join').disabled = true;
+    connect();
+  };
+  document.getElementById('join').onclick = join;
+  nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') join(); });
+}
+boot();
+</script>
+</body>
+</html>
